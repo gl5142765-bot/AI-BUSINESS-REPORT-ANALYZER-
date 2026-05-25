@@ -1,0 +1,271 @@
+import json
+
+from app.prompts import (
+    build_ask_prompt,
+    build_company_overview_prompt,
+    build_growth_risk_analysis_prompt,
+    build_financial_compliance_prompt,
+    build_executive_summary_prompt,
+)
+
+
+def build_context_from_docs(docs) -> str:
+    return "\n\n".join(doc.page_content for doc in docs)
+
+
+def generate_response(llm, prompt: str) -> str:
+    response = llm.invoke(prompt)
+    if hasattr(response, "content"):
+        return response.content.strip()
+    return str(response).strip()
+
+
+def safe_parse_json(text: str, fallback: dict) -> dict:
+    try:
+        return json.loads(text)
+    except json.JSONDecodeError:
+        return fallback
+
+
+def merge_with_fallback(data: dict, fallback: dict) -> dict:
+    if not isinstance(data, dict):
+        return fallback
+
+    merged = {}
+
+    for key, fallback_value in fallback.items():
+        if key not in data:
+            merged[key] = fallback_value
+        else:
+            if isinstance(fallback_value, dict):
+                merged[key] = merge_with_fallback(data.get(key, {}), fallback_value)
+            else:
+                value = data.get(key)
+                merged[key] = value if value not in [None, ""] else fallback_value
+
+    return merged
+
+
+# =========================
+# MODE 1: ASK QUESTIONS
+# =========================
+
+def ask_question(db, llm, question: str, k: int = 5) -> dict:
+    docs = db.similarity_search(question, k=k)
+
+    if not docs:
+        return {
+            "output": "The answer is not available in the uploaded report."
+        }
+
+    context = build_context_from_docs(docs)
+    prompt = build_ask_prompt(context, question)
+    answer = generate_response(llm, prompt)
+
+    return {
+        "output": answer
+    }
+
+
+# =========================
+# MODE 2: FOUR FEATURES
+# =========================
+
+def retrieve_company_overview_docs(db, k: int = 4):
+    retrieval_queries = [
+        "company overview business summary operations industry",
+        "business segments divisions operating segments subsidiaries",
+        "products services solutions offerings brands",
+        "geography regions countries markets international operations",
+        "leadership management board ownership promoters shareholders",
+        "financial highlights revenue profit margin assets cash flow operating metrics",
+    ]
+
+    all_docs = []
+    seen = set()
+
+    for query in retrieval_queries:
+        docs = db.similarity_search(query, k=k)
+        for doc in docs:
+            content = getattr(doc, "page_content", "").strip()
+            if content and content not in seen:
+                seen.add(content)
+                all_docs.append(doc)
+
+    return all_docs
+
+
+def run_company_overview(db, llm, k: int = 4) -> dict:
+    fallback = {
+        "title": "Company Overview",
+        "business_description": "Not available in the retrieved context",
+        "business_segments": "Not available in the retrieved context",
+        "geography": "Not available in the retrieved context",
+        "products_and_services": "Not available in the retrieved context",
+        "ownership_and_leadership": "Not available in the retrieved context",
+        "key_highlights": "Not available in the retrieved context",
+        "financial_and_operating_metrics": "Not available in the retrieved context",
+    }
+
+    docs = retrieve_company_overview_docs(db, k=k)
+
+    if not docs:
+        return {"output": fallback}
+
+    context = build_context_from_docs(docs)
+    prompt = build_company_overview_prompt(context)
+    answer_text = generate_response(llm, prompt)
+    answer = safe_parse_json(answer_text, fallback)
+    answer = merge_with_fallback(answer, fallback)
+
+    return {"output": answer}
+
+
+def run_growth_risk_analysis(db, llm, k: int = 4) -> dict:
+    queries = [
+        "revenue growth profitability margins earnings trend",
+        "expansion strategy growth drivers demand market outlook",
+        "business risks competition operational risks",
+        "debt liquidity regulation macroeconomic risks governance concerns",
+    ]
+
+    fallback = {
+        "title": "Growth & Risk Analysis",
+        "growth_analysis": {
+            "revenue_growth": "Not available in the retrieved context",
+            "profitability_trend": "Not available in the retrieved context",
+            "growth_drivers": "Not available in the retrieved context",
+            "market_outlook": "Not available in the retrieved context",
+        },
+        "risk_analysis": {
+            "business_risks": "Not available in the retrieved context",
+            "credit_and_liquidity_risks": "Not available in the retrieved context",
+            "macro_and_regulatory_risks": "Not available in the retrieved context",
+            "governance_or_execution_concerns": "Not available in the retrieved context",
+        },
+        "final_insight": "Not available in the retrieved context",
+    }
+
+    all_docs = []
+    seen = set()
+
+    for query in queries:
+        docs = db.similarity_search(query, k=k)
+        for doc in docs:
+            text = doc.page_content.strip()
+            if text and text not in seen:
+                seen.add(text)
+                all_docs.append(doc)
+
+    if not all_docs:
+        return {"output": fallback}
+
+    context = build_context_from_docs(all_docs)
+    prompt = build_growth_risk_analysis_prompt(context)
+    answer_text = generate_response(llm, prompt)
+    answer = safe_parse_json(answer_text, fallback)
+    answer = merge_with_fallback(answer, fallback)
+
+    return {"output": answer}
+
+
+def run_financial_compliance_analysis(db, llm, k: int = 4) -> dict:
+    queries = [
+        "revenue from operations sales turnover total income operating revenue year comparison",
+        "revenue growth year on year segment revenue income from operations business performance",
+        "directors report share capital proceeds utilization loans borrowings subsidies board report",
+        "balance sheet assets liabilities reserves debt working capital solvency ratios",
+        "auditor opinion qualification emphasis audit remarks internal controls",
+        "governance compliance disclosures board meetings regulations red flags",
+    ]
+
+    fallback = {
+        "title": "Financial & Compliance Analysis",
+        "financial_performance": {
+            "revenue_analysis": "Not available in the retrieved context",
+            "directors_report_analysis": "Not available in the retrieved context",
+            "balance_sheet_analysis": "Not available in the retrieved context",
+        },
+        "compliance_and_governance": {
+            "auditor_opinion": "Not available in the retrieved context",
+            "corporate_governance": "Not available in the retrieved context",
+            "disclosures": "Not available in the retrieved context",
+            "red_flags": "No clear red flag is evident from the retrieved context",
+        },
+        "financial_conclusion": {
+            "overall_financial_health": "Not available in the retrieved context",
+            "warning_signs_and_reality_checks": "Not available in the retrieved context",
+        },
+    }
+
+    all_docs = []
+    seen = set()
+
+    for query in queries:
+        docs = db.similarity_search(query, k=k)
+        for doc in docs:
+            text = doc.page_content.strip()
+            if text and text not in seen:
+                seen.add(text)
+                all_docs.append(doc)
+
+    if not all_docs:
+        return {"output": fallback}
+
+    context = build_context_from_docs(all_docs)
+    prompt = build_financial_compliance_prompt(context)
+    answer_text = generate_response(llm, prompt)
+    answer = safe_parse_json(answer_text, fallback)
+    answer = merge_with_fallback(answer, fallback)
+
+    return {"output": answer}
+
+
+def run_executive_summary(db, llm, k: int = 6) -> dict:
+    queries = [
+        "company overview business model operations products services segments geography markets",
+        "growth strategy expansion performance highlights business momentum outlook",
+        "revenue profitability margins cash flow debt balance sheet liquidity financial highlights",
+        "governance compliance board auditor disclosures controls management discussion",
+        "risks uncertainties challenges red flags constraints dependencies",
+        "overall summary company position strengths weaknesses future direction",
+    ]
+
+    fallback = {
+        "title": "Executive Summary",
+        "company_snapshot": "Not available in the retrieved context",
+        "key_highlights": {
+            "growth_highlights": "Not available in the retrieved context",
+            "financial_highlights": "Not available in the retrieved context",
+            "major_strengths": "Not available in the retrieved context",
+        },
+        "key_risks": {
+            "top_risks": "Not available in the retrieved context",
+        },
+        "overall_assessment": {
+            "business_strength": "Not available in the retrieved context",
+        },
+        "final_summary": "Not available in the retrieved context",
+    }
+
+    all_docs = []
+    seen = set()
+
+    for query in queries:
+        docs = db.similarity_search(query, k=k)
+        for doc in docs:
+            text = doc.page_content.strip()
+            if text and text not in seen:
+                seen.add(text)
+                all_docs.append(doc)
+
+    if not all_docs:
+        return {"output": fallback}
+
+    context = build_context_from_docs(all_docs)
+    prompt = build_executive_summary_prompt(context)
+    answer_text = generate_response(llm, prompt)
+    answer = safe_parse_json(answer_text, fallback)
+    answer = merge_with_fallback(answer, fallback)
+
+    return {"output": answer}

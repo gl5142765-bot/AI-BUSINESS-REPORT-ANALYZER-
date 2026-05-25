@@ -1,0 +1,8 @@
+{
+  "type": "module"
+}
+
+
+"scripts": {
+  "dev": "nodemon server.js"
+}

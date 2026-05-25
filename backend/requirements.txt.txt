@@ -1,0 +1,13 @@
+fastapi
+uvicorn[standard]
+
+pydantic
+pypdf
+
+langchain
+langchain-openai
+langchain-chroma
+chromadb
+
+openai
+python-dotenv
