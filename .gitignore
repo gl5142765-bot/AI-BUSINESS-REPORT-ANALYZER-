@@ -22,3 +22,16 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Python cache
+__pycache__/
+*.py[cod]
+*.py.txt
+
+# Local data and uploads
+data/uploads/
+*.bin
+
+# Virtual envs
+.venv/
+env/
