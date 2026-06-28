@@ -1,6 +1,6 @@
 // src/services/reportService.js
 
-const API_BASE_URL = const API_BASE = 'https://ai-business-report-analyzer.onrender.com';
+const API_BASE_URL = 'https://ai-business-report-analyzer.onrender.com';
 
 // file: File (PDF)
 // onProgress: optional (percent) => void
