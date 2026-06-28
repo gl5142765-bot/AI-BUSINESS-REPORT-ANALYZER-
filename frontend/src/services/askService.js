@@ -1,6 +1,6 @@
 // src/services/askService.js
 
-const API_BASE_URL = const API_BASE = 'https://ai-business-report-analyzer.onrender.com';
+const API_BASE_URL = 'https://ai-business-report-analyzer.onrender.com';
 
 // question: string
 // options: { reportId?: string } – we can pass the active report
