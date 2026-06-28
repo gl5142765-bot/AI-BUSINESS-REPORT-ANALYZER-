@@ -1,7 +1,7 @@
+
 // src/services/analysisService.js
 
-// Base URL for the backend API
-const API_BASE_URL =  https://ai-business-report-analyzer.onrender.com;
+const API_BASE_URL = 'https://ai-business-report-analyzer.onrender.com';
   
 
 // Helper to POST JSON and handle errors
