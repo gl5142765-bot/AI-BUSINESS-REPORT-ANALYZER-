@@ -1,7 +1,7 @@
 // src/services/analysisService.js
 
 // Base URL for the backend API
-const API_BASE_URL =
+const API_BASE_URL = const API_BASE = 'https://ai-business-report-analyzer.onrender.com';
   import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
 
 // Helper to POST JSON and handle errors
