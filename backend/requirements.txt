@@ -5,9 +5,14 @@ pydantic
 pypdf
 
 langchain
+langchain-community
 langchain-openai
 langchain-chroma
 chromadb
 
 openai
 python-dotenv
+pydantic-settings
+fastapi
+uvicorn
+
